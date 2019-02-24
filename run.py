@@ -11,35 +11,31 @@ def extract_address(text):
     return extracted
 
 
-def geocode(address):
-    geo = geocoder.google(address)
-    lat = geo.lat or 0.0
-    lng = geo.lng or 0.0
-    return lat, lng
-
-
 def process_address(raw_address, writer, identifier):
     real_address = extract_address(raw_address)
     formatted_address = re.sub(' , ', '', real_address)
-    lat, lng = geocode(formatted_address)
-    if lat and lng:
-        writer.write('{}\t{}\t{}\t{}\n'.format(formatted_address, lat, lng, identifier))
+    writer.write('{}\t{}\n'.format(formatted_address, identifier))
 
 
 def process_pdf(pdf, writer, identifier):
+    print(f'  Found {pdf.numPages} pages.')
     for page_num in range(pdf.numPages):
         text = pdf.getPage(page_num).extractText()
         page_addrs = re.findall('Municipality\:\s([a-zA-Z ]+[0-9]+.*?[0-9]{5})', text)
-        for raw_addr in page_addrs:
+        for idx, raw_addr in enumerate(page_addrs):
+            print(f'  Processing address {idx+1} of {len(page_addrs)} on page {page_num+1}')
             process_address(raw_addr, writer=writer, identifier=identifier)
 
 
 def main():
     files = ['bid.pdf', 'postponed.pdf']
+    files = ['bid.pdf']
     with open('addresses.tsv', 'w') as write:
+        write.write('Address\tCategory\n')
         for filename in files:
             with open(filename, 'rb') as read:
                 pdf = PyPDF2.PdfFileReader(read)
+                print(f'Processing {filename}')
                 process_pdf(pdf, writer=write, identifier=filename)
 
 
